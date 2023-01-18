@@ -28,6 +28,21 @@ const veryifyMainAdmin = async (req, res, next) => {
     next();
 }
 
+// Verify JWT
+function verifyJwt(req, res, next) {
+    const token = req.headers.authorization;
+    if (!token) {
+        return res.status(401).send('unauthorized access')
+    }
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: "Forbiden Token" });
+        }
+        req.decoded = decoded;
+        next();
+    })
+}
+
 // Login
 router.post('/login', async (req, res) => {
     const { email, password } = req.body
@@ -125,7 +140,12 @@ router.post('/user-info', async (req, res) => {
 
 
 // Update User info ---query by email and send info in body---
-router.put('/update-user/:email', async (req, res) => {
+router.put('/update-user/:email', verifyJwt, async (req, res) => {
+    const email = req.params.email;
+    console.log(email);
+    if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Token" });
+    }
     const {
         phone, name, birthday,
         p_dis,
@@ -143,7 +163,6 @@ router.put('/update-user/:email', async (req, res) => {
     } = req.body;
 
     try {
-        const email = req.params?.email;
         const user = await userTableModel.updateOne({ email }, {
             $set: {
                 phone, name, birthday,
@@ -173,8 +192,11 @@ router.put('/update-user/:email', async (req, res) => {
 })
 
 // Apply for varification
-router.post('/apply-for-verify', async (req, res) => {
+router.post('/apply-for-verify', verifyJwt, async (req, res) => {
     const { email, idNumber, frontPage, backPage } = req.body;
+    if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Forbidden Token" });
+    }
     try {
         const oldUser = await userVerificationModel.findOne({ email })
         if (oldUser) {
