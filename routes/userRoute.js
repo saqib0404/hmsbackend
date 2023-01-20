@@ -36,7 +36,7 @@ function verifyJwt(req, res, next) {
     }
     jwt.verify(token, process.env.ACCESS_TOKEN, (err, decoded) => {
         if (err) {
-            return res.status(403).send({ message: "Forbiden Token" });
+            return res.status(403).send({ message: "Forbidden Token" });
         }
         req.decoded = decoded;
         next();
@@ -46,22 +46,21 @@ function verifyJwt(req, res, next) {
 // Login
 router.post('/login', async (req, res) => {
     const { email, password } = req.body
-    console.log(email, password);
     if (!email || !password) return res.send({ message: "Invalid Information" })
     try {
         const user = await userSecurityModel.findOne({ email });
-        if (!user) return res.send({ message: "User not Found" })
+        if (!user) return res.status(404).send({ message: "User not Found" })
 
         if (await bcrypt.compare(password, user.password)) {
             const token = jwt.sign({ email: user.email }, process.env.ACCESS_TOKEN)
 
             if (res.status(201)) {
-                return res.send({ message: "success", data: token })
+                return res.status(200).send({ message: "success", data: token })
             } else {
-                return res.send({ message: "failed to login" })
+                return res.status(500).send({ message: "failed to login" })
             }
         }
-        res.send({ message: "Invalid Password" })
+        res.status(400).send({ message: "Invalid Password" })
 
     } catch (error) {
         res.status(500).send({ message: error.message })
@@ -77,7 +76,7 @@ router.post('/signup', async (req, res) => {
         const oldUser = await userSecurityModel.findOne({ email })
         const oldUser2 = await userTableModel.findOne({ email })
         if (oldUser || oldUser2) {
-            return res.send({ message: "User already exists" })
+            return res.status(409).send({ message: "User already exists" })
         }
         const uniqueId = uuid.v4()
         await userSecurityModel.create({
@@ -105,13 +104,24 @@ router.post('/signup', async (req, res) => {
             c_postcode: null,
             c_area: null,
 
+            // hotels: {
+            //     hotelId: null,
+            //     hotelName: null,
+            //     role: null
+            // },
+
             id_card_front_page: null,
             id_card_back_page: null,
+
+            idNumber: null,
+            frontPage: null,
+            backPage: null,
+            pendingStatus: null,
 
             isVerified: false,
             isActive: true,
         });
-        res.send({ message: "success" })
+        res.status(201).send({ message: "success" })
     } catch (error) {
         res.status(500).send({ message: error.message })
     }
@@ -127,10 +137,10 @@ router.post('/user-info', async (req, res) => {
         const user = jwt.verify(token, process.env.ACCESS_TOKEN)
         userTableModel.findOne({ email: user?.email })
             .then((data) => {
-                res.send({ message: "success", data: data })
+                res.status(200).send({ message: "success", data: data })
             })
             .catch(err => {
-                res.send({ message: err.message })
+                res.status(404).send({ message: err.message })
             })
 
     } catch (error) {
@@ -142,7 +152,6 @@ router.post('/user-info', async (req, res) => {
 // Update User info ---query by email and send info in body---
 router.put('/update-user/:email', verifyJwt, async (req, res) => {
     const email = req.params.email;
-    console.log(email);
     if (email !== req.decoded.email) {
         return res.status(403).send({ message: "Forbidden Token" });
     }
@@ -157,9 +166,6 @@ router.put('/update-user/:email', verifyJwt, async (req, res) => {
         c_thana,
         c_postcode,
         c_area,
-
-        id_card_front_page,
-        id_card_back_page
     } = req.body;
 
     try {
@@ -175,15 +181,12 @@ router.put('/update-user/:email', verifyJwt, async (req, res) => {
                 c_thana,
                 c_postcode,
                 c_area,
-
-                id_card_front_page,
-                id_card_back_page
             }
         });
         if (user) {
-            res.send({ data: user })
+            res.status(200).send({ data: user, message: "success" })
         } else {
-            res.send({ message: "User Not Found!" })
+            res.status(404).send({ message: "User Not Found!" })
         }
 
     } catch (error) {
@@ -192,25 +195,26 @@ router.put('/update-user/:email', verifyJwt, async (req, res) => {
 })
 
 // Apply for varification
-router.post('/apply-for-verify', verifyJwt, async (req, res) => {
-    const { email, idNumber, frontPage, backPage } = req.body;
+router.put('/apply-for-verify/:email', verifyJwt, async (req, res) => {
+    const email = req.params.email;
+    const { idNumber, id_card_front_page, id_card_back_page } = req.body;
     if (email !== req.decoded.email) {
         return res.status(403).send({ message: "Forbidden Token" });
     }
     try {
-        const oldUser = await userVerificationModel.findOne({ email })
-        if (oldUser) {
-            return res.send({ message: "Verification resquest has been sent already" })
-        }
-        await userVerificationModel.create({
-            idNumber,
-            email,
-            frontPage,
-            backPage,
-            pendingStatus: true,
-            isVerified: false
+        const user = await userTableModel.updateOne({ email }, {
+            $set: {
+                idNumber,
+                id_card_front_page,
+                id_card_back_page,
+                pendingStatus: true,
+            }
         });
-        res.send({ message: "success" })
+        if (user) {
+            res.status(200).send({ data: user, message: "success" })
+        } else {
+            res.status(404).send({ message: "User Not Found!" })
+        }
     } catch (error) {
         res.status(500).send({ message: error.message })
     }
@@ -221,7 +225,7 @@ router.get('/applied-users', veryifyMainAdmin, async (req, res) => {
     try {
         const allUser = await userVerificationModel.find();
         if (allUser) {
-            res.status(200).send({ data: allUser });
+            res.status(200).send({ data: allUser, message: "success" });
         } else {
             res.status(404).send({ message: "Users not found" });
         }
@@ -236,19 +240,14 @@ router.put('/verify-user/:email', veryifyMainAdmin, async (req, res) => {
         const email = req.params?.email;
         const user = await userTableModel.updateOne({ email }, {
             $set: {
-                isVerified: true
-            }
-        });
-        const user2 = await userVerificationModel.updateOne({ email }, {
-            $set: {
                 isVerified: true,
                 pendingStatus: false
             }
-        });
-        if (user && user2) {
-            res.send({ data: user })
+        })
+        if (user) {
+            res.status(200).send({ data: user, message: "success" })
         } else {
-            res.send({ message: "Admin Not Found!" })
+            res.status(404).send({ message: "Admin Not Found!" })
         }
 
     } catch (error) {
@@ -261,7 +260,7 @@ router.get('/', veryifyMainAdmin, async (req, res) => {
     try {
         const allUser = await userSecurityModel.find().select({ password: 0 });
         if (allUser) {
-            res.status(200).send({ data: allUser });
+            res.status(200).send({ data: allUser, message: "success" });
         } else {
             res.status(404).send({ message: "Users not found" });
         }
@@ -282,19 +281,14 @@ router.put('/disable/:email', veryifyMainAdmin, async (req, res) => {
         const user2 = await userTableModel.updateOne({ email }, {
             $set: {
                 isVerified: false,
-                isActive: false
+                isActive: false,
+                pendingStatus: null
             }
-        });
-        const user3 = await userVerificationModel.updateOne({ email }, {
-            $set: {
-                isVerified: false,
-                pendingStatus: true
-            }
-        });
-        if (user && user2 && user3) {
-            res.send({ data: user })
+        })
+        if (user && user2) {
+            res.status(200).send({ data: user, mesage: "success" })
         } else {
-            res.send({ message: "User Not Found!" })
+            res.status(404).send({ message: "User Not Found!" })
         }
 
     } catch (error) {
@@ -313,13 +307,14 @@ router.put('/able/:email', veryifyMainAdmin, async (req, res) => {
         });
         const user2 = await userTableModel.updateOne({ email }, {
             $set: {
-                isActive: true
+                isActive: true,
+                pendingStatus: null
             }
         });
         if (user && user2) {
-            res.send({ data: user })
+            res.status(200).send({ data: user, message: "success" })
         } else {
-            res.send({ message: "User Not Found!" })
+            res.status(404).send({ message: "User Not Found!" })
         }
 
     } catch (error) {
