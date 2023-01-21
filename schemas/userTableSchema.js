@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+const hotelsSchema = mongoose.Schema({
+    hotelId: String,
+    hotelName: String,
+    role: String
+})
+
 const userTableSchema = mongoose.Schema({
     userId: {
         type: String,
@@ -28,11 +34,7 @@ const userTableSchema = mongoose.Schema({
     id_card_back_page: String,
     pendingStatus: Boolean,
 
-    hotels: {
-        hotelId: [String],
-        hotelName: [String],
-        role: String
-    },
+    hotels: [hotelsSchema],
 
     isVerified: Boolean,
     isActive: Boolean,

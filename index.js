@@ -5,6 +5,7 @@ const port = process.env.PORT || 5000;
 const mongoose = require("mongoose");
 require("dotenv").config();
 const { userRoute } = require("./routes/userRoute");
+const hotelRoute = require("./routes/hotelRoute");
 
 //middleware
 app.use(cors());
@@ -18,6 +19,7 @@ mongoose.connect(`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cl
 
 // routes
 app.use("/users", userRoute);
+app.use("/hotel", hotelRoute);
 
 
 // Tests

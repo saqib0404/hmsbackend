@@ -6,11 +6,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const userSecuritySchema = require('../schemas/userSecuritySchema');
 const userTableSchema = require('../schemas/userTableSchema');
-const userVerificationSchema = require('../schemas/userVerificationSchema');
 
 const userSecurityModel = new mongoose.model("userSecurityModel", userSecuritySchema);
 const userTableModel = new mongoose.model("userTableModel", userTableSchema);
-const userVerificationModel = new mongoose.model("userVerificationModel", userVerificationSchema);
 
 // Verify admin middleware
 const veryifyMainAdmin = async (req, res, next) => {
@@ -78,7 +76,7 @@ router.post('/signup', async (req, res) => {
         if (oldUser || oldUser2) {
             return res.status(409).send({ message: "User already exists" })
         }
-        const uniqueId = uuid.v4()
+        const uniqueId = uuid.v4().slice(0, 7)
         await userSecurityModel.create({
             userId: uniqueId,
             email,
@@ -223,7 +221,7 @@ router.put('/apply-for-verify/:email', verifyJwt, async (req, res) => {
 // Get all users for verification
 router.get('/applied-users', veryifyMainAdmin, async (req, res) => {
     try {
-        const allUser = await userVerificationModel.find();
+        const allUser = await userTableModel.find();
         if (allUser) {
             res.status(200).send({ data: allUser, message: "success" });
         } else {
@@ -322,4 +320,4 @@ router.put('/able/:email', veryifyMainAdmin, async (req, res) => {
     }
 })
 
-module.exports = { userRoute: router, userSecurityModel };
+module.exports = { userRoute: router, userSecurityModel, userTableModel };
