@@ -130,4 +130,37 @@ router.put('/verify', verifyMainAdmin, async (req, res) => {
     }
 })
 
+// get All requests
+router.get('/a', async (req, res) => {
+    try {
+        const hotels = await hotelPanelModel.aggregate([
+            {
+                $match: { "hotelName": "Akua mata" },
+
+            },
+            {
+                $project: {
+                    _id: 0,
+                    "myObj": {
+                        $filter: {
+                            input: "$roles",
+                            as: "role",
+                            cond: {
+                                $eq: ["$$role.role", "Owner"]
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+        if (hotels) {
+            res.status(200).send({ data: hotels, message: "success" });
+        } else {
+            res.status(404).send({ message: "Users not found" });
+        }
+    } catch (error) {
+        res.status(500).send({ message: error.message })
+    }
+})
+
 module.exports = router

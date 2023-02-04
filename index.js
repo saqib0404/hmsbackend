@@ -20,7 +20,7 @@ mongoose.connect(`mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cl
 // routes
 app.use("/users", userRoute);
 app.use("/hotel", hotelRoute);
-
+app.use(express.static("public"))
 
 // Tests
 app.get("/", (req, res) => {

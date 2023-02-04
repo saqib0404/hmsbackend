@@ -19,14 +19,14 @@ const userTableSchema = mongoose.Schema({
     name: String,
     birthday: String,
 
-    p_dis: String,
+    p_division: String,
+    p_district: String,
     p_thana: String,
-    p_postcode: String,
     p_area: String,
 
-    c_dis: String,
+    c_division: String,
+    c_district: String,
     c_thana: String,
-    c_postcode: String,
     c_area: String,
 
     idNumber: String,
@@ -38,6 +38,7 @@ const userTableSchema = mongoose.Schema({
 
     isVerified: Boolean,
     isActive: Boolean,
+    pending: Boolean
 });
 
 module.exports = userTableSchema;
