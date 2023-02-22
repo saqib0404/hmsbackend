@@ -121,7 +121,7 @@ router.post('/signup', async (req, res) => {
     }
 })
 
-// Geting user Info
+// Geting user Info by user
 router.post('/user-info', async (req, res) => {
     const { token } = req.body;
     if (!token) {
@@ -130,6 +130,23 @@ router.post('/user-info', async (req, res) => {
     try {
         const user = jwt.verify(token, process.env.ACCESS_TOKEN)
         userTableModel.findOne({ email: user?.email })
+            .then((data) => {
+                res.status(200).send({ message: "success", data: data })
+            })
+            .catch(err => {
+                res.status(404).send({ message: err.message })
+            })
+
+    } catch (error) {
+        res.status(500).send({ message: error.message })
+    }
+})
+
+// Geting user Info by admin
+router.get('/user-info/:email', async (req, res) => {
+    const email = req.params.email;
+    try {
+        userTableModel.findOne({ email })
             .then((data) => {
                 res.status(200).send({ message: "success", data: data })
             })
